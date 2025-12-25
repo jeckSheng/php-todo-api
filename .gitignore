@@ -1,0 +1,7 @@
+.env
+.vscode
+
+# 包文件
+/vendor/
+
+CLAUDE.md

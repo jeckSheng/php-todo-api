@@ -1,0 +1,21 @@
+{
+    "name": "qys/php-todo-api",
+    "description": "一个基于 PHP + MySQL 的 RESTful 任务管理接口，支持用户注册/登录、任务增删改查、JWT 鉴权，可作为移动端或前端应用的后端服务",
+    "type": "project",
+    "authors": [
+        {
+            "name": "da sheng"
+        }
+    ],
+    "require": {
+        "firebase/php-jwt": "^7.0",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\Models\\": "models/",
+            "App\\Middleware\\": "middleware/",
+            "App\\Controllers\\": "controllers/"
+        }
+    }
+}
