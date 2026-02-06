@@ -6,6 +6,9 @@ require_once __DIR__ . '/bootstrap.php';
 use App\Models\UserModel;
 use App\Models\TaskModel;
 use App\Middleware\Auth;
+use App\RequestValidation\ValidatorHelper;
+use App\RequestValidation\RegisterRequest;
+use App\RequestValidation\TaskRequest;
 
 // 允许跨域（保留）
 header("Access-Control-Allow-Origin: *");
@@ -34,6 +37,13 @@ if ($path === '/') {
     if (!$data) {
         error_return('参数错误');
     }
+
+    // 使用验证规则类
+    $errors = ValidatorHelper::validate($data, RegisterRequest::rules());
+    if ($errors) {
+        error_return(implode('; ', $errors));
+    }
+
     $email = $data['email'];
     $password = $data['password'];
 
@@ -54,6 +64,13 @@ if ($path === '/') {
     if (!$data) {
         error_return('参数错误');
     }
+
+    // 使用验证规则类
+    $errors = ValidatorHelper::validate($data, RegisterRequest::loginRules());
+    if ($errors) {
+        error_return(implode('; ', $errors));
+    }
+
     $email = $data['email'];
     $password = $data['password'];
 
@@ -68,14 +85,21 @@ if ($path === '/') {
         error_return('用户名或密码错误');
     }
 
-    $data = [
+    $responseData = [
         'email' => $email,
         'token' => Auth::generateToken($user['id']),
     ];
 
-    success_return($data, '登录成功');
+    success_return($responseData, '登录成功');
 } elseif ($path === '/tasks/list' && $method === 'GET') {
     $userId = Auth::requireAuth();
+
+    // 验证查询参数
+    $queryParams = $_GET;
+    $errors = ValidatorHelper::validate($queryParams, TaskRequest::listRules());
+    if ($errors) {
+        error_return(implode('; ', $errors));
+    }
 
     $taskModel = new TaskModel($pdo);
     $params = [
@@ -87,7 +111,7 @@ if ($path === '/') {
         $params['title'] = $title;
     }
     $status = $_GET['status'] ?? '';
-    if ($status) {
+    if ($status !== '') {
         $params['status'] = $status;
     }
     $page = $_GET['page'] ?? 1;
@@ -104,13 +128,19 @@ if ($path === '/') {
         error_return('参数错误');
     }
 
+    // 使用验证规则类
+    $errors = ValidatorHelper::validate($data, TaskRequest::createRules());
+    if ($errors) {
+        error_return(implode('; ', $errors));
+    }
+
     try {
         $taskModel = new TaskModel($pdo);
         $id = $taskModel->create([
             'user_id' => $userId,
             'title' => $data['title'],
-            'description' => $data['description'],
-            'status' => $data['status'],
+            'description' => $data['description'] ?? '',
+            'status' => $data['status'] ?? 0,
         ]);
 
         success_return(['id' => $id], '创建成功');
@@ -124,14 +154,29 @@ if ($path === '/') {
     if (!$data) {
         error_return('参数错误');
     }
-    
+
+    // 使用验证规则类
+    $errors = ValidatorHelper::validate($data, TaskRequest::updateRules());
+    if ($errors) {
+        error_return(implode('; ', $errors));
+    }
+
     try {
         $taskModel = new TaskModel($pdo);
-        $taskModel->update($data['id'], $userId, [
-            'title' => $data['title'],
-            'description' => $data['description'],
-            'status' => $data['status'],
-        ]);
+
+        // 只更新提供的字段
+        $updateData = [];
+        if (isset($data['title'])) {
+            $updateData['title'] = $data['title'];
+        }
+        if (isset($data['description'])) {
+            $updateData['description'] = $data['description'];
+        }
+        if (isset($data['status'])) {
+            $updateData['status'] = $data['status'];
+        }
+
+        $taskModel->update($data['id'], $userId, $updateData);
         success_return([], '更新成功');
     } catch (\Exception $e) {
         error_return($e->getMessage());
@@ -142,6 +187,12 @@ if ($path === '/') {
 
     if (!$data) {
         error_return('参数错误');
+    }
+
+    // 使用验证规则类
+    $errors = ValidatorHelper::validate($data, TaskRequest::deleteRules());
+    if ($errors) {
+        error_return(implode('; ', $errors));
     }
 
     try {

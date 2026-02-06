@@ -6,6 +6,9 @@ use Firebase\JWT\Key;
 
 class Auth {
     private static $key;
+    private function __construct() {
+        JWT::$leeway = 60; // 设置 leeway 为 60 秒
+    }
 
     public static function getKey() {
         if (self::$key === null) {
